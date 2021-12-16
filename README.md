@@ -19,15 +19,15 @@ Shouldn't we have in fact a [self sovereign identity](https://www.manning.com/bo
 
 ## Getting Started with Indy SDK
 
+### Start local nodes pool with docker
+
+Starting local Indy nodes is described in greater detail [here](https://github.com/hyperledger/indy-sdk#how-to-start-local-nodes-pool-with-docker)
+
 ```
-# [#2446] docker compose up fails in in pip3 install
-# https://github.com/hyperledger/indy-sdk/issues/2446
+docker run -d \
+  --name="indy" \
+  -p 9701-9708:9701-9708 \
+  nessusio/indy-pool
 
-git clone https://github.com/tdiesler/indy-sdk
-cd indy-sdk/docs/getting-started
-
-docker compose up
-...
-To access the notebook, open this in a browser:
-    http://127.0.0.1:8888/?token=53832e5cbbe935949b01c02bdd1f8668ee50c3adc4d5a4fe
+docker logs -f indy
 ```
