@@ -1,0 +1,7 @@
+1,2,,4,comment1,1
+5,,7,8,comment2,2
+9,foo,foo,Adam,,3
+12,foo,14,15,comment4,999999
+I1,16,17,18,comment5,999999
+I2,Missing,18,19,Missing,4
+I3,Missing,Missing,20,comments added,-1

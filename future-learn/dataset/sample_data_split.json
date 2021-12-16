@@ -1,0 +1,4 @@
+{"index":[0,1,2,3,4],
+"columns":["Product","Price"],
+"data":[["Laptop", 1500],["Desktop",1000],["Tablet",700],["iPhone",1800],["Android",1200]]
+}

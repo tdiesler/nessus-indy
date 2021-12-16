@@ -1,0 +1,7 @@
+A,1,0,1,2,3,comment1
+A,2,1,2,3,4,comment2
+A,3,5,6,7,8,comment3
+A,4,9,10,11,Adam,comment4
+B,1,12,13,14,15,comment5
+B,2,I1,16,17,18,comment6
+B,3,I2,19,20,21,comment7
