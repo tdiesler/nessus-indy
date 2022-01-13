@@ -1,0 +1,47 @@
+version: '2'
+
+networks:
+  pool_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.0.0/24
+
+services:
+  indy_pool:
+    build:
+      context: .
+      args:
+         pool_ip: 10.0.0.2
+      dockerfile: indy-pool.dockerfile
+    image: nessusio/getting-started-pool
+    container_name: getting-started-pool
+    working_dir: /home/indy
+    ports:
+      - "9701-9708:9701-9708"
+    networks:
+      pool_network:
+        ipv4_address: 10.0.0.2
+    volumes:
+       - sandbox:/var/lib/indy/sandbox/
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: getting-started.dockerfile
+    command: jupyter notebook --ip=0.0.0.0
+    image: nessusio/getting-started
+    container_name: getting-started
+    working_dir: /home/indy
+    volumes:
+       - ./getting-started.ipynb:/home/indy/getting-started.ipynb
+       - ./getting-started-ext.ipynb:/home/indy/getting-started-ext.ipynb
+       - sandbox:/home/indy/sandbox
+    ports:
+      - "8888:8888"
+    networks:
+      - pool_network
+
+volumes:
+     sandbox:

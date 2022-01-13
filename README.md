@@ -19,15 +19,31 @@ Shouldn't we have in fact a [self sovereign identity](https://www.manning.com/bo
 
 ## Getting Started with Indy SDK
 
+```
+docker-compose -f ~/git/nessus-indy/docker/getting-started.yml up
+```
+
 ### Start local nodes pool with docker
 
-Starting local Indy nodes is described in greater detail [here](https://github.com/hyperledger/indy-sdk#how-to-start-local-nodes-pool-with-docker)
+Here is how you can run a local nodes pool.
 
 ```
-docker run -d \
-  --name="indy" \
+docker run --detach \
+  --name=indy-pool \
   -p 9701-9708:9701-9708 \
   nessusio/indy-pool
 
-docker logs -f indy
+docker logs -f indy-pool
+```
+
+More details [here](https://github.com/hyperledger/indy-sdk#how-to-start-local-nodes-pool-with-docker)
+
+### Install the indy-cli
+
+How to install the indy-cli is documented [here](https://github.com/hyperledger/indy-sdk/tree/master/cli)
+
+```
+$ indy-cli
+
+pool set-protocol-version 2
 ```
