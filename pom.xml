@@ -46,15 +46,16 @@
     <properties>
 
         <!-- Camel versions -->
-        <version.apache.camel>2.23.2.fuse-7_11_0-00001</version.apache.camel>
+        <version.apache.camel>3.11.5</version.apache.camel>
         
         <!-- Other versions -->
-        <version.indy.sdk>1.14.2</version.indy.sdk>
+        <version.commons.io>2.5</version.commons.io>
+        <version.indy.sdk>1.16.0</version.indy.sdk>
+        <version.slf4j>1.7.33</version.slf4j>
         <version.junit>4.12</version.junit>
 
         <!-- 
             Plugin versions
-            
             mvn versions:display-plugin-updates 
         -->
         <version-docker-maven-plugin>0.20.1</version-docker-maven-plugin>
@@ -73,6 +74,7 @@
 
         <!-- Common Maven properties -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
     </properties>
 
     <!-- Modules -->
@@ -90,11 +92,22 @@
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
+			<dependency>
+				<groupId>commons-io</groupId>
+				<artifactId>commons-io</artifactId>
+				<version>${version.commons.io}</version>
+			</dependency>
             <dependency>
                 <groupId>org.hyperledger</groupId>
                 <artifactId>indy</artifactId>
                 <version>${version.indy.sdk}</version>
             </dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-simple</artifactId>
+				<version>${version.slf4j}</version>
+			</dependency>
+			<!---Dorg.slf4j.simpleLogger.defaultLogLevel=debug-->
         </dependencies>
     </dependencyManagement>
     

@@ -28,22 +28,54 @@ docker-compose -f ~/git/nessus-indy/docker/getting-started.yml up
 Here is how you can run a local nodes pool.
 
 ```
+INDY_VERSION=1.16.0
+INDY_CONTENT_URL="https://raw.githubusercontent.com/hyperledger/indy-sdk"
+docker build -t nessusio/indy-pool "${INDY_CONTENT_URL}/v${INDY_VERSION}/ci/indy-pool.dockerfile"
+
 docker run --detach \
   --name=indy-pool \
   -p 9701-9708:9701-9708 \
   nessusio/indy-pool
-
-docker logs -f indy-pool
 ```
 
 More details [here](https://github.com/hyperledger/indy-sdk#how-to-start-local-nodes-pool-with-docker)
 
-### Install the indy-cli
 
-How to install the indy-cli is documented [here](https://github.com/hyperledger/indy-sdk/tree/master/cli)
+### Install libindy & indy-cli
+
+How to install libindy is documented [here](https://github.com/hyperledger/indy-sdk/tree/master#installing-the-sdk)
+and indy-cli [here](https://github.com/hyperledger/indy-sdk/tree/master/cli)
+
+#### CentOS
+
+Install details are [here](https://github.com/hyperledger/indy-sdk#centos)
 
 ```
-$ indy-cli
+wget https://repo.sovrin.org/rpm/libindy/stable/1.16.0/libindy.1.16.0.rpm
+sudo yum install -y libsodium sqlite
+sudo rpm -i libindy.1.16.0.rpm
 
-pool set-protocol-version 2
+wget https://repo.sovrin.org/rpm/indy-cli/stable/1.16.0/indy-cli.1.16.0.rpm
+sudo yum install -y ncurses-compat-libs openssl compat-openssl10 zeromq
+sudo rpm -i indy-cli.1.16.0.rpm
+```
+
+#### MacOS
+
+Install details are [here](https://github.com/hyperledger/indy-sdk#macos)
+
+```
+INDY_VERSION=1.16.0
+
+# Build and install libindy
+
+curl -s https://raw.githubusercontent.com/hyperledger/indy-sdk/v${INDY_VERSION}/libindy/mac.build.sh | sh
+
+# Install indy-cli dynamic library
+
+wget https://repo.sovrin.org/macos/indy-cli/stable/${INDY_VERSION}/indy-cli_${INDY_VERSION}.zip \
+  && unzip -d indy-cli-${INDY_VERSION} indy-cli_${INDY_VERSION}.zip \
+  && sudo mv indy-cli-${INDY_VERSION} /usr/local/opt/ \
+  && sudo ln -s indy-cli-${INDY_VERSION} /usr/local/opt/indy-cli \
+  && sudo ln -s ../opt/indy-cli/indy-cli /usr/local/bin/indy-cli
 ```
