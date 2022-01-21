@@ -22,14 +22,20 @@ package io.nessus.indy.test;
 
 import org.hyperledger.indy.sdk.pool.Pool;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.nessus.indy.utils.PoolUtils;
 
 
 public class LedgerTest {
 
+	Logger log = LoggerFactory.getLogger(getClass());
+	
 	@Test
 	public void testLedger() throws Exception {
 		
-		System.out.println("Ledger sample -> started");
+		log.info("Ledger sample -> started");
 
 		// Set protocol version 2
 		Pool.setProtocolVersion(PoolUtils.PROTOCOL_VERSION).get();
@@ -46,6 +52,6 @@ public class LedgerTest {
 		// 11. Delete Pool ledger config
 		Pool.deletePoolLedgerConfig(poolName).get();
 
-		System.out.println("Ledger sample -> completed");
+		log.info("Ledger sample -> completed");
 	}
 }

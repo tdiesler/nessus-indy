@@ -1,4 +1,4 @@
-package io.nessus.indy.test;
+package io.nessus.indy.utils;
 
 import org.apache.commons.io.FileUtils;
 
