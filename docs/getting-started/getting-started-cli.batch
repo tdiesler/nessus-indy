@@ -1,0 +1,95 @@
+# ===========================================================================
+# Getting started example using indy-cli
+
+# ===========================================================================
+# Start a local indy pool
+#
+# 	docker rm -f indy-pool
+#
+# 	docker run --detach --name=indy-pool -p 9701-9708:9701-9708 nessusio/indy-pool
+#
+# Run like this ...
+#
+# rm -rf ~/.indy_client && indy-cli etc/getting-started-cli.batch
+
+# ==================================================================================
+# Set protocol version 2
+
+pool set-protocol-version 2
+
+# ==================================================================================
+# Setup pool and wallets
+
+pool create pool1 gen_txn_file=./etc/pool-genesis.txs
+pool connect pool1
+
+wallet create Steward key=steward_wallet_key
+wallet create Government key=government_wallet_key
+wallet create Faber key=faber_wallet_key
+wallet create Acme key=acme_wallet_key
+wallet create Thrift key=thrift_wallet_key
+
+# ==================================================================================
+# Getting Steward credential
+
+wallet open Steward key=steward_wallet_key
+did new seed=000000000000000000000000Steward1 metadata="Steward1"
+did use Th7MpTaRZVRYnPiabds81Y
+ledger nym did=Th7MpTaRZVRYnPiabds81Y role=STEWARD verkey=~7TYfekw4GUagBnBVCqPjiC
+
+# ==================================================================================
+# Getting Trust Anchor credentials for Government
+
+wallet open Government key=government_wallet_key
+did new seed=000000000000000000000Government1 metadata="Government"
+did use 5iWVNb56iqMoGwnY62HB1j
+
+wallet open Faber key=faber_wallet_key
+did new seed=00000000000000000000000000Faber1 metadata="Faber"
+did use Ddk8Fh77usrVC65zvbkZFp
+
+wallet open Acme key=acme_wallet_key
+did new seed=000000000000000000000000000Acme1 metadata="Acme"
+did use 8A9VYDjAVEqWrsfjLA3VDc
+
+wallet open Thrift key=thrift_wallet_key
+did new seed=0000000000000000000000000Thrift1 metadata="Thrift"
+did use NxMcEk3ixsEoA1LNTivYTw
+
+# ==================================================================================
+# Only a Steward can store these credentials in the ledger
+
+wallet open Steward key=steward_wallet_key
+did use Th7MpTaRZVRYnPiabds81Y
+
+- ledger nym did=5iWVNb56iqMoGwnY62HB1j role=ENDORSER verkey=~5Zyg8vCV5qQfdfRwQk8w94
+- ledger nym did=Ddk8Fh77usrVC65zvbkZFp role=ENDORSER verkey=~WtB8WA8DX6S1nEF1Kedzvp
+- ledger nym did=8A9VYDjAVEqWrsfjLA3VDc role=ENDORSER verkey=~JJzBSVtkuJKimj4vQoBjhU
+- ledger nym did=NxMcEk3ixsEoA1LNTivYTw role=ENDORSER verkey=~7uL73TWk5BcbG4a2H4SgbE
+
+# ==================================================================================
+# Credential Schemas Setup
+#
+# Schemas in indy are very simple JSON documents that specify their name and version, and that list attributes that will appear in a credential.
+# Today, they do not describe data type, recurrence rules, nesting, and other elaborate constructs.
+
+wallet open Government key=government_wallet_key
+did use 5iWVNb56iqMoGwnY62HB1j
+
+- ledger schema name=Job-Certificate version=0.2 attr_names=first_name,last_name,salary,employee_status,experience
+ledger get-schema did=5iWVNb56iqMoGwnY62HB1j name=Job-Certificate version=0.2
+
+- ledger schema name=Transcript version=1.2 attr_names=first_name,last_name,degree,status,year,average,ssn
+ledger get-schema did=5iWVNb56iqMoGwnY62HB1j name=Transcript version=1.2
+
+# ==================================================================================
+# Faber Credential Definition
+#
+# References the schema that we just added, and announces who is going to be issuing credentials with that schema,
+# what type of signature method they plan to use (“CL” = “Camenisch Lysyanskya”, the default method used for zero-knowledge proofs by indy),
+# how they plan to handle revocation, and so forth.
+
+wallet open Faber key=faber_wallet_key
+did use Ddk8Fh77usrVC65zvbkZFp
+
+#ledger cred-def schema_id=17 signature_type=CL tag=TAG1 primary={"n":"1","s":"2","r":{"age":"4","name":"5"},"rctxt":"6","z":"7"}

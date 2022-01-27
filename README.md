@@ -20,7 +20,7 @@ Shouldn't we have in fact a [self sovereign identity](https://www.manning.com/bo
 ## Getting Started with Indy SDK
 
 ```
-docker-compose -f ~/git/nessus-indy/docker/getting-started.yml up
+docker-compose -f ./docs/getting-started/getting-started.yml up
 ```
 
 ### Start local nodes pool with docker
@@ -51,13 +51,17 @@ and indy-cli [here](https://github.com/hyperledger/indy-sdk/tree/master/cli)
 Install details are [here](https://github.com/hyperledger/indy-sdk#centos)
 
 ```
-wget https://repo.sovrin.org/rpm/libindy/stable/1.16.0/libindy.1.16.0.rpm
-sudo yum install -y libsodium sqlite
-sudo rpm -i libindy.1.16.0.rpm
+INDY_VERSION=1.16.0
 
-wget https://repo.sovrin.org/rpm/indy-cli/stable/1.16.0/indy-cli.1.16.0.rpm
+# Build and install libindy dynamic lib
+wget https://repo.sovrin.org/rpm/libindy/stable/${INDY_VERSION}/libindy.1.16.0.rpm
+sudo yum install -y libsodium sqlite
+sudo rpm -i libindy.${INDY_VERSION}.rpm
+
+# Install indy-cli 
+wget https://repo.sovrin.org/rpm/indy-cli/stable/${INDY_VERSION}/indy-cli.${INDY_VERSION}.rpm
 sudo yum install -y ncurses-compat-libs openssl compat-openssl10 zeromq
-sudo rpm -i indy-cli.1.16.0.rpm
+sudo rpm -i indy-cli.${INDY_VERSION}.rpm
 ```
 
 #### MacOS
@@ -67,12 +71,10 @@ Install details are [here](https://github.com/hyperledger/indy-sdk#macos)
 ```
 INDY_VERSION=1.16.0
 
-# Build and install libindy
-
+# Build and install libindy dynamic lib
 curl -s https://raw.githubusercontent.com/hyperledger/indy-sdk/v${INDY_VERSION}/libindy/mac.build.sh | sh
 
-# Install indy-cli dynamic library
-
+# Install indy-cli 
 wget https://repo.sovrin.org/macos/indy-cli/stable/${INDY_VERSION}/indy-cli_${INDY_VERSION}.zip \
   && unzip -d indy-cli-${INDY_VERSION} indy-cli_${INDY_VERSION}.zip \
   && sudo mv indy-cli-${INDY_VERSION} /usr/local/opt/ \

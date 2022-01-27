@@ -34,7 +34,7 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>camel</module>
+        <module>samples</module>
     </modules>
 
 </project>
