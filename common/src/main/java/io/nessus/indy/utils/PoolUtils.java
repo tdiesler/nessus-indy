@@ -9,6 +9,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+/**
+ * Borrowed from ...
+ * indy-sdk/../wrappers/java/src/test/java/org/hyperledger/indy/sdk/utils/PoolUtils.java 
+ */
 public class PoolUtils {
 
 	private static final String DEFAULT_POOL_NAME = "default_pool";

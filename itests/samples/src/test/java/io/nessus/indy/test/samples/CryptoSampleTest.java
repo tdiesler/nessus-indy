@@ -18,7 +18,7 @@
  * #L%
  */
 
-package io.nessus.indy.test;
+package io.nessus.indy.test.samples;
 
 import static io.nessus.indy.utils.IndyConstants.PROTOCOL_VERSION;
 import static org.hyperledger.indy.sdk.crypto.Crypto.authCrypt;

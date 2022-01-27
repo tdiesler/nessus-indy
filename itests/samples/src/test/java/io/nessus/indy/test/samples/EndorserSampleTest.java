@@ -18,7 +18,7 @@
  * #L%
  */
 
-package io.nessus.indy.test;
+package io.nessus.indy.test.samples;
 
 import static org.hyperledger.indy.sdk.anoncreds.Anoncreds.issuerCreateSchema;
 import static org.hyperledger.indy.sdk.ledger.Ledger.appendRequestEndorser;

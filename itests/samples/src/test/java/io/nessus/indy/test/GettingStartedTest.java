@@ -23,11 +23,18 @@ package io.nessus.indy.test;
 import static io.nessus.indy.utils.IndyConstants.ROLE_ENDORSER;
 import static io.nessus.indy.utils.IndyConstants.ROLE_STEWARD;
 
+import java.util.Arrays;
+
+import org.hyperledger.indy.sdk.anoncreds.Anoncreds;
+import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateAndStoreCredentialDefResult;
+import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult;
 import org.hyperledger.indy.sdk.did.Did;
 import org.hyperledger.indy.sdk.did.DidResults.CreateAndStoreMyDidResult;
 import org.hyperledger.indy.sdk.ledger.Ledger;
+import org.hyperledger.indy.sdk.ledger.LedgerResults.ParseResponseResult;
 import org.hyperledger.indy.sdk.pool.Pool;
 import org.hyperledger.indy.sdk.wallet.Wallet;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -58,111 +65,127 @@ public class GettingStartedTest {
 
 		// 2. Create the Wallets
 		logInfo("Create wallet - Steward");
-		String wconfigSteward = new JSONObject().put("id", "Steward").toString();
-		String wkeySteward = new JSONObject().put("key", "steward_wallet_key").toString();
-		Wallet.createWallet(wconfigSteward, wkeySteward).get();
+		String stewardWalletConfig = new JSONObject().put("id", "Steward").toString();
+		String stewardWalletKey = new JSONObject().put("key", "steward_wallet_key").toString();
+		Wallet.createWallet(stewardWalletConfig, stewardWalletKey).get();
 		
 		logInfo("Create wallet - Government");
-		String wconfigGovernment = new JSONObject().put("id", "Government").toString();
-		String wkeyGovernment = new JSONObject().put("key", "government_wallet_key").toString();
-		Wallet.createWallet(wconfigGovernment, wkeyGovernment).get();
+		String governmentWalletConfig = new JSONObject().put("id", "Government").toString();
+		String governmentWalletKey = new JSONObject().put("key", "government_wallet_key").toString();
+		Wallet.createWallet(governmentWalletConfig, governmentWalletKey).get();
 		
 		logInfo("Create wallet - Faber");
-		String wconfigFaber = new JSONObject().put("id", "Faber").toString();
-		String wkeyFaber = new JSONObject().put("key", "faber_wallet_key").toString();
-		Wallet.createWallet(wconfigFaber, wkeyFaber).get();
+		String faberWalletConfig = new JSONObject().put("id", "Faber").toString();
+		String faberWalletKey = new JSONObject().put("key", "faber_wallet_key").toString();
+		Wallet.createWallet(faberWalletConfig, faberWalletKey).get();
 		
 		logInfo("Create wallet - Acme");
-		String wconfigAcme = new JSONObject().put("id", "Acme").toString();
-		String wkeyAcme = new JSONObject().put("key", "acme_wallet_key").toString();
-		Wallet.createWallet(wconfigAcme, wkeyAcme).get();
+		String acmeWalletConfig = new JSONObject().put("id", "Acme").toString();
+		String acmeWalletKey = new JSONObject().put("key", "acme_wallet_key").toString();
+		Wallet.createWallet(acmeWalletConfig, acmeWalletKey).get();
 		
 		logInfo("Create wallet - Thrift");
-		String wconfigThrift = new JSONObject().put("id", "Thrift").toString();
-		String wkeyThrift = new JSONObject().put("key", "thrift_wallet_key").toString();
-		Wallet.createWallet(wconfigThrift, wkeyThrift).get();
+		String thriftWalletConfig = new JSONObject().put("id", "Thrift").toString();
+		String thriftWalletKey = new JSONObject().put("key", "thrift_wallet_key").toString();
+		Wallet.createWallet(thriftWalletConfig, thriftWalletKey).get();
 		
 		// 3. Getting Credential for Steward
 		
 		logInfo("Open wallet - Steward");
-		Wallet walletSteward = Wallet.openWallet(wconfigSteward, wkeySteward).get();
-		String seedSteward = new JSONObject().put("seed", "000000000000000000000000Steward1").toString();
-		CreateAndStoreMyDidResult didResultSteward = Did.createAndStoreMyDid(walletSteward, seedSteward).get();
-		String didSteward = didResultSteward.getDid();
-		String vkeySteward = didResultSteward.getVerkey();
-		logInfo("DID Steward: did={}, vkey={}", didSteward, vkeySteward);
-		Ledger.buildNymRequest(didSteward, didSteward, vkeySteward, null, ROLE_STEWARD).get();
+		Wallet stewardWallet = Wallet.openWallet(stewardWalletConfig, stewardWalletKey).get();
+		String stewardSeed = new JSONObject().put("seed", "000000000000000000000000Steward1").toString();
+		CreateAndStoreMyDidResult stewardDidResult = Did.createAndStoreMyDid(stewardWallet, stewardSeed).get();
+		String stewardDid = stewardDidResult.getDid();
+		String stewardVkey = stewardDidResult.getVerkey();
+		logInfo("DID Steward: did={}, vkey={}", stewardDid, stewardVkey);
+		String nymRequest = Ledger.buildNymRequest(stewardDid, stewardDid, stewardVkey, null, ROLE_STEWARD).get();
+		Ledger.signAndSubmitRequest(pool, stewardWallet, stewardDid, nymRequest).get();
 
-		String res = Ledger.buildGetNymRequest(null, didSteward).get();
-		logInfo(res);
-		
 		// 4. Getting Credentials for Government, Faber, Acme, Thrift
 		
-		Wallet walletGovernment = Wallet.openWallet(wconfigGovernment, wkeyGovernment).get();
-		String seedGovernment = new JSONObject().put("seed", "000000000000000000000Government1").toString();
-		CreateAndStoreMyDidResult didResultGovernment = Did.createAndStoreMyDid(walletGovernment, seedGovernment).get();
-		String didGovernment = didResultGovernment.getDid();
-		String vkeyGovernment = didResultGovernment.getVerkey();
-		logInfo("DID Government: did={}, vkey={}", didGovernment, vkeyGovernment);
-		Ledger.buildNymRequest(didSteward, didGovernment, vkeyGovernment, null, ROLE_ENDORSER).get();
+		Wallet governmentWallet = Wallet.openWallet(governmentWalletConfig, governmentWalletKey).get();
+		String governmentSeed = new JSONObject().put("seed", "000000000000000000000Government1").toString();
+		CreateAndStoreMyDidResult governmentDidResult = Did.createAndStoreMyDid(governmentWallet, governmentSeed).get();
+		String governmentDid = governmentDidResult.getDid();
+		String governmentVkey = governmentDidResult.getVerkey();
+		logInfo("DID Government: did={}, vkey={}", governmentDid, governmentVkey);
+		nymRequest = Ledger.buildNymRequest(stewardDid, governmentDid, governmentVkey, null, ROLE_ENDORSER).get();
+		Ledger.signAndSubmitRequest(pool, governmentWallet, governmentDid, nymRequest).get();
 
-		Wallet walletFaber = Wallet.openWallet(wconfigFaber, wkeyFaber).get();
-		String seedFaber = new JSONObject().put("seed", "00000000000000000000000000Faber1").toString();
-		CreateAndStoreMyDidResult didResultFaber = Did.createAndStoreMyDid(walletFaber, seedFaber).get();
-		String didFaber = didResultFaber.getDid();
-		String vkeyFaber = didResultFaber.getVerkey();
-		logInfo("DID Faber: did={}, vkey={}", didFaber, vkeyFaber);
-		Ledger.buildNymRequest(didSteward, didFaber, vkeyFaber, null, ROLE_ENDORSER).get();
+		Wallet faberWallet = Wallet.openWallet(faberWalletConfig, faberWalletKey).get();
+		String faberSeed = new JSONObject().put("seed", "00000000000000000000000000Faber1").toString();
+		CreateAndStoreMyDidResult faberDidResult = Did.createAndStoreMyDid(faberWallet, faberSeed).get();
+		String faberDid = faberDidResult.getDid();
+		String faberVkey = faberDidResult.getVerkey();
+		logInfo("DID Faber: did={}, vkey={}", faberDid, faberVkey);
+		nymRequest = Ledger.buildNymRequest(stewardDid, faberDid, faberVkey, null, ROLE_ENDORSER).get();
+		Ledger.signAndSubmitRequest(pool, faberWallet, faberDid, nymRequest).get();
 
-		Wallet walletAcme = Wallet.openWallet(wconfigAcme, wkeyAcme).get();
-		String seedAcme = new JSONObject().put("seed", "000000000000000000000000000Acme1").toString();
-		CreateAndStoreMyDidResult didResultAcme = Did.createAndStoreMyDid(walletAcme, seedAcme).get();
-		String didAcme = didResultAcme.getDid();
-		String vkeyAcme = didResultAcme.getVerkey();
-		logInfo("DID Acme: did={}, vkey={}", didAcme, vkeyAcme);
-		Ledger.buildNymRequest(didSteward, didAcme, vkeyAcme, null, ROLE_ENDORSER).get();
+		Wallet acmeWallet = Wallet.openWallet(acmeWalletConfig, acmeWalletKey).get();
+		String acmeSeed = new JSONObject().put("seed", "000000000000000000000000000Acme1").toString();
+		CreateAndStoreMyDidResult acmeDidResult = Did.createAndStoreMyDid(acmeWallet, acmeSeed).get();
+		String acmeDid = acmeDidResult.getDid();
+		String acmeVkey = acmeDidResult.getVerkey();
+		logInfo("DID Acme: did={}, vkey={}", acmeDid, acmeVkey);
+		nymRequest = Ledger.buildNymRequest(stewardDid, acmeDid, acmeVkey, null, ROLE_ENDORSER).get();
+		Ledger.signAndSubmitRequest(pool, acmeWallet, acmeDid, nymRequest).get();
 
-		Wallet walletThrift = Wallet.openWallet(wconfigThrift, wkeyThrift).get();
-		String seedThrift = new JSONObject().put("seed", "0000000000000000000000000Thrift1").toString();
-		CreateAndStoreMyDidResult didResultThrift = Did.createAndStoreMyDid(walletThrift, seedThrift).get();
-		String didThrift = didResultThrift.getDid();
-		String vkeyThrift = didResultThrift.getVerkey();
-		logInfo("DID Thrift: did={}, vkey={}", didThrift, vkeyThrift);
-		Ledger.buildNymRequest(didSteward, didThrift, vkeyThrift, null, ROLE_ENDORSER).get();
+		Wallet thriftWallet = Wallet.openWallet(thriftWalletConfig, thriftWalletKey).get();
+		String thriftSeed = new JSONObject().put("seed", "0000000000000000000000000Thrift1").toString();
+		CreateAndStoreMyDidResult thriftDidResult = Did.createAndStoreMyDid(thriftWallet, thriftSeed).get();
+		String thriftDid = thriftDidResult.getDid();
+		String thriftVkey = thriftDidResult.getVerkey();
+		logInfo("DID Thrift: did={}, vkey={}", thriftDid, thriftVkey);
+		nymRequest = Ledger.buildNymRequest(stewardDid, thriftDid, thriftVkey, null, ROLE_ENDORSER).get();
+        Ledger.signAndSubmitRequest(pool, thriftWallet, thriftDid, nymRequest).get();
 
-		// 5. Credential Schemas Setup
+		// 5. Credential Schemas Setup for Job-Certificate and Transcript
 		//
 		// Schemas in indy are very simple JSON documents that specify their name and version, and that list attributes that will appear in a credential.
 		// Today, they do not describe data type, recurrence rules, nesting, and other elaborate constructs.
 
-//		String jsonJobCertificate = new JSONObject()
-//			.put("name", "Job-Certificate").put("version", "0.2")
-//			.put("attr_names", Arrays.asList("first_name","last_name","salary","employee_status","experience"))
-//			.toString();
-//		logInfo(jsonJobCertificate);
+        // Build and submit the Job-Certificate schema
+        
+		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(stewardDid, "Job-Certificate", "0.2", new JSONArray(Arrays.asList("first_name","last_name","salary","employee_status","experience")).toString()).get();
+		logInfo(schemaResult.toString());
+		Ledger.buildSchemaRequest(stewardDid, schemaResult.getSchemaJson()).get();
+		String jobCertificateSchemaId = schemaResult.getSchemaId();
 		
-		String name = "gvt";
-		String version = "1.0";
-		String attributes = "[\"age\", \"sex\", \"height\", \"name\"]";
-		String schemaDataJSON = "{\"name\":\"" + name + "\",\"version\":\"" + version + "\",\"attr_names\":" + attributes + "}";
-		logInfo("DID: " + didSteward + ", Schema: " + schemaDataJSON);
-//		String string = Ledger.buildSchemaRequest(didSteward, schemaDataJSON).get();
-//		logInfo(string);
+		String schemaRequest = Ledger.buildSchemaRequest(stewardDid, schemaResult.getSchemaJson()).get();
+		Ledger.signAndSubmitRequest(pool, stewardWallet, stewardDid, schemaRequest).get();
 		
+		String getSchemaRequest = Ledger.buildGetSchemaRequest(stewardDid, jobCertificateSchemaId).get();
+		String jobCertificateGetSchemaResponse = Ledger.submitRequest(pool, getSchemaRequest).get();
+		logInfo(jobCertificateGetSchemaResponse);
+		
+        // Build and submit the Transcript schema
+		
+		schemaResult = Anoncreds.issuerCreateSchema(stewardDid, "Transcript", "1.2", new JSONArray(Arrays.asList("first_name","last_name","degree","status","year","average","ssn")).toString()).get();		
+		logInfo(schemaResult.toString());
+		Ledger.buildSchemaRequest(stewardDid, schemaResult.getSchemaJson()).get();
+		String transcriptSchemaId = schemaResult.getSchemaId();
+		
+		schemaRequest = Ledger.buildSchemaRequest(stewardDid, schemaResult.getSchemaJson()).get();
+		Ledger.signAndSubmitRequest(pool, stewardWallet, stewardDid, schemaRequest).get();
+		
+		getSchemaRequest = Ledger.buildGetSchemaRequest(stewardDid, transcriptSchemaId).get();
+		String transcriptGetSchemaResponse = Ledger.submitRequest(pool, getSchemaRequest).get();
+		logInfo(transcriptGetSchemaResponse);
+				
 		// ...
 		
 		// 9. Close and delete the Wallets
-		walletThrift.closeWallet().get();
-		walletAcme.closeWallet().get();
-		walletFaber.closeWallet().get();
-		walletGovernment.closeWallet().get();
-		walletSteward.closeWallet().get();
+		thriftWallet.closeWallet().get();
+		acmeWallet.closeWallet().get();
+		faberWallet.closeWallet().get();
+		governmentWallet.closeWallet().get();
+		stewardWallet.closeWallet().get();
 
-		Wallet.deleteWallet(wconfigThrift, wkeyThrift).get();
-		Wallet.deleteWallet(wconfigAcme, wkeyAcme).get();
-		Wallet.deleteWallet(wconfigFaber, wkeyFaber).get();
-		Wallet.deleteWallet(wconfigGovernment, wkeyGovernment).get();
-		Wallet.deleteWallet(wconfigSteward, wkeySteward).get();
+		Wallet.deleteWallet(thriftWalletConfig, thriftWalletKey).get();
+		Wallet.deleteWallet(acmeWalletConfig, acmeWalletKey).get();
+		Wallet.deleteWallet(faberWalletConfig, faberWalletKey).get();
+		Wallet.deleteWallet(governmentWalletConfig, governmentWalletKey).get();
+		Wallet.deleteWallet(stewardWalletConfig, stewardWalletKey).get();
 		
 		// 10. Close Pool
 		pool.closePoolLedger().get();
