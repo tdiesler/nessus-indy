@@ -172,6 +172,39 @@ public class GettingStartedTest {
 		String transcriptGetSchemaResponse = Ledger.submitRequest(pool, getSchemaRequest).get();
 		logInfo(transcriptGetSchemaResponse);
 				
+		// 6. Credential Definition Setup for Faber and Acme
+		//
+		// References the schema that we just added, and announces who is going to be issuing credentials with that schema,
+		// what type of signature method they plan to use (“CL” = “Camenisch Lysyanskya”, the default method used for zero-knowledge proofs by indy),
+		// how they plan to handle revocation, and so forth.
+		
+		// Faber Credential Definition Setup
+		
+		String configJson = new JSONObject().put("support_revocation", false).toString();
+		ParseResponseResult parseSchemaResult = Ledger.parseGetSchemaResponse(transcriptGetSchemaResponse).get();
+		IssuerCreateAndStoreCredentialDefResult createCredDefResult = Anoncreds.issuerCreateAndStoreCredentialDef(faberWallet, faberDid, parseSchemaResult.getObjectJson(), "TAG1", null, configJson).get();
+		String transcriptCredDefId = createCredDefResult.getCredDefId();
+
+		String credDefRequest = Ledger.buildCredDefRequest(faberDid, createCredDefResult.getCredDefJson()).get();
+		Ledger.signAndSubmitRequest(pool, faberWallet, faberDid, credDefRequest).get();
+		
+		String getCredDefRequest = Ledger.buildGetCredDefRequest(faberDid, transcriptCredDefId).get();
+		String transcriptGetCredDefResponse = Ledger.submitRequest(pool, getCredDefRequest).get();
+		logInfo(transcriptGetCredDefResponse);
+		
+		// 7. Acme Credential Definition Setup
+
+		parseSchemaResult = Ledger.parseGetSchemaResponse(jobCertificateGetSchemaResponse).get();
+		createCredDefResult = Anoncreds.issuerCreateAndStoreCredentialDef(acmeWallet, acmeDid, parseSchemaResult.getObjectJson(), "TAG1", null, configJson).get();
+		String jobCertificateCredDefId = createCredDefResult.getCredDefId();
+
+		credDefRequest = Ledger.buildCredDefRequest(acmeDid, createCredDefResult.getCredDefJson()).get();
+		Ledger.signAndSubmitRequest(pool, acmeWallet, acmeDid, credDefRequest).get();
+		
+		getCredDefRequest = Ledger.buildGetCredDefRequest(acmeDid, jobCertificateCredDefId).get();
+		String jobCertificateGetCredDefResponse = Ledger.submitRequest(pool, getCredDefRequest).get();
+		logInfo(jobCertificateGetCredDefResponse);
+
 		// ...
 		
 		// 9. Close and delete the Wallets
