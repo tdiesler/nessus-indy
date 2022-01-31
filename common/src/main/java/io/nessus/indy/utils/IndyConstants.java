@@ -5,7 +5,10 @@ package io.nessus.indy.utils;
  */
 public class IndyConstants {
 
+	public static final int PROTOCOL_VERSION = 2;
+	
+	public static final String ROLE_TRUSTEE = "TRUSTEE";
 	public static final String ROLE_STEWARD = "STEWARD";
 	public static final String ROLE_ENDORSER = "ENDORSER";
-	public static final int PROTOCOL_VERSION = 2;
+	public static final String NETWORK_MONITOR = "NETWORK_MONITOR";
 }

@@ -19,6 +19,8 @@ Shouldn't we have in fact a [self sovereign identity](https://www.manning.com/bo
 
 ## Getting Started with Indy SDK
 
+[Getting Started](https://hyperledger-indy.readthedocs.io/projects/sdk/en/latest/docs/getting-started/)
+
 ```
 docker-compose -f ./docs/getting-started/getting-started.yml up
 ```
