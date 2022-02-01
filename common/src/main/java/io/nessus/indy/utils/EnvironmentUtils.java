@@ -1,5 +1,8 @@
 package io.nessus.indy.utils;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.apache.commons.io.FileUtils;
 
 /**
@@ -20,6 +23,12 @@ public class EnvironmentUtils {
 		return getIndyHomePath() + filename;
 	}
 
+	public static void deleteIndyHomePath() throws IOException {
+		File clientHome = new File(getIndyHomePath());
+		if (clientHome.isDirectory())
+			FileUtils.deleteDirectory(clientHome);
+	}
+	
 	static String getTmpPath() {
 		return FileUtils.getTempDirectoryPath() + "/indy/";
 	}

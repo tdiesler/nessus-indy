@@ -21,7 +21,7 @@
 package io.nessus.indy.test;
 
 import static io.nessus.indy.utils.IndyConstants.ROLE_ENDORSER;
-import static io.nessus.indy.utils.IndyConstants.ROLE_STEWARD;
+import static io.nessus.indy.utils.IndyConstants.ROLE_TRUSTEE;
 
 import java.util.Arrays;
 
@@ -52,6 +52,12 @@ import io.nessus.indy.utils.PoolUtils;
  * Remove dirty client state
  * 
  * rm -rf ~/.indy_client
+ * 
+ * Trustees operate nodes. Trustees govern the network. These are the highest privileged DIDs. 
+ * Endorsers are able to write Schemas and Cred_Defs to the ledger, or sign such transactions so they can be written by non-privileged DIDs.
+ * 
+ * We want to ensure a DID has the least amount of privilege it needs to operate, which in many cases is no privilege, 
+ * provided the resources it needs are already written to the ledger, either by a privileged DID or by having the txn signed by a privileged DID (e.g. by an Endorser).
  */
 public class GettingStartedTest {
 
@@ -63,20 +69,12 @@ public class GettingStartedTest {
 		String poolName;
 		Pool pool;
 		
-		// Steward
-		String stewardWalletConfig;
-		String stewardWalletKey;
-		Wallet stewardWallet;
-		String stewardDid;
-		String stewardVkey;
-		String stewardDidForGovernment;
-		String stewardVkeyForGovernment;
-		String stewardDidForFaber;
-		String stewardVkeyForFaber;
-		String stewardDidForAcme;
-		String stewardVkeyForAcme;
-		String stewardDidForThrift;
-		String stewardVkeyForThrift;
+		// Trustee
+		String trusteeWalletConfig;
+		String trusteeWalletKey;
+		Wallet trusteeWallet;
+		String trusteeDid;
+		String trusteeVkey;
 		
 		// Government
 		String governmentWalletConfig;
@@ -84,8 +82,6 @@ public class GettingStartedTest {
 		Wallet governmentWallet;
 		String governmentDid;
 		String governmentVkey;
-		String governmentDidForSteward;
-		String governmentVkeyForSteward;
 		
 		// Faber
 		String faberWalletConfig;
@@ -93,8 +89,7 @@ public class GettingStartedTest {
 		Wallet faberWallet;
 		String faberDid;
 		String faberVkey;
-		String faberDidForSteward;
-		String faberVkeyForSteward;
+		String faberTranscriptSchemaId;
 		
 		// Acme
 		String acmeWalletConfig;
@@ -102,8 +97,7 @@ public class GettingStartedTest {
 		Wallet acmeWallet;
 		String acmeDid;
 		String acmeVkey;
-		String acmeDidForSteward;
-		String acmeVkeyForSteward;
+		String acmeJobCertificateSchemaId;
 		
 		// Thrift
 		String thriftWalletConfig;
@@ -111,12 +105,6 @@ public class GettingStartedTest {
 		Wallet thriftWallet;
 		String thriftDid;
 		String thriftVkey;
-		String thriftDidForSteward;
-		String thriftVkeyForSteward;
-	
-		// Credential Schemas
-		String jobCertificateSchemaId;
-		String transcriptSchemaId;
 	}
 	
 	@Test
@@ -128,9 +116,9 @@ public class GettingStartedTest {
 		
 		createAndOpenPoolLedger(ctx);
 		
-		// Creating Steward Wallet and DID
+		// Creating Trustee Wallet and DID
 		
-		createSteward(ctx);
+		createTrustee(ctx);
 		
 		// Onboarding Government, Faber, Acme, Thrift as Trust Anchors
 		
@@ -156,47 +144,45 @@ public class GettingStartedTest {
 
 	void createAndOpenPoolLedger(Context ctx) throws Exception {
 		
-		logInfo("Create and Open Pool Ledger");
-
-		logInfo("LD_LIBRARY_PATH: {}", System.getenv("LD_LIBRARY_PATH"));
+		log.info("Create and Open Pool Ledger");
 		
 		// Set protocol version 2
 		Pool.setProtocolVersion(IndyConstants.PROTOCOL_VERSION).get();
 		
 		// Create ledger config from genesis txn file
 		
-		logInfo("Create and open Ledger");
+		log.info("Create and open Ledger");
 		ctx.poolName = PoolUtils.createPoolLedgerConfig("pool1");
 		ctx.pool = Pool.openPoolLedger(ctx.poolName, "{}").get();
 	}
 	
-	void createSteward(Context ctx) throws Exception {
+	void createTrustee(Context ctx) throws Exception {
 		
-		// Create Wallet for Steward
+		// Create Wallet for Trustee
 		
-		logInfo("Create wallet - Steward");
-		ctx.stewardWalletConfig = new JSONObject().put("id", "Steward").toString();
-		ctx.stewardWalletKey = new JSONObject().put("key", "steward_wallet_key").toString();
-		Wallet.createWallet(ctx.stewardWalletConfig, ctx.stewardWalletKey).get();
-		ctx.stewardWallet = Wallet.openWallet(ctx.stewardWalletConfig, ctx.stewardWalletKey).get();
+		log.info("Create wallet - Trustee");
+		ctx.trusteeWalletConfig = new JSONObject().put("id", "Trustee").toString();
+		ctx.trusteeWalletKey = new JSONObject().put("key", "trustee_wallet_key").toString();
+		Wallet.createWallet(ctx.trusteeWalletConfig, ctx.trusteeWalletKey).get();
+		ctx.trusteeWallet = Wallet.openWallet(ctx.trusteeWalletConfig, ctx.trusteeWalletKey).get();
 		
-		// Getting Credential for Steward
+		// Getting Credential for Trustee
 		
-		String stewardSeed = new JSONObject().put("seed", "000000000000000000000000Steward1").toString();
-		CreateAndStoreMyDidResult didResult = Did.createAndStoreMyDid(ctx.stewardWallet, stewardSeed).get();
-		ctx.stewardDid = didResult.getDid();
-		ctx.stewardVkey = didResult.getVerkey();
+		String trusteeSeed = new JSONObject().put("seed", "000000000000000000000000Trustee1").toString();
+		CreateAndStoreMyDidResult didResult = Did.createAndStoreMyDid(ctx.trusteeWallet, trusteeSeed).get();
+		ctx.trusteeDid = didResult.getDid();
+		ctx.trusteeVkey = didResult.getVerkey();
 		
-		logInfo("DID Steward: did={}, vkey={}", ctx.stewardDid, ctx.stewardVkey);
-		String nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.stewardDid, ctx.stewardVkey, null, ROLE_STEWARD).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.stewardWallet, ctx.stewardDid, nymRequest).get();
+		log.info("DID Trustee: did={}, vkey={}", ctx.trusteeDid, ctx.trusteeVkey);
+		String nymRequest = Ledger.buildNymRequest(ctx.trusteeDid, ctx.trusteeDid, ctx.trusteeVkey, null, ROLE_TRUSTEE).get();
+		signAndSubmitRequest(ctx, ctx.trusteeWallet, ctx.trusteeDid, nymRequest);
 	}
 	
 	void onboardGovernment(Context ctx) throws Exception {
 		
 		// Create Wallet for Government
 		
-		logInfo("Create wallet - Government");
+		log.info("Create wallet - Government");
 		ctx.governmentWalletConfig = new JSONObject().put("id", "Government").toString();
 		ctx.governmentWalletKey = new JSONObject().put("key", "government_wallet_key").toString();
 		Wallet.createWallet(ctx.governmentWalletConfig, ctx.governmentWalletKey).get();
@@ -209,36 +195,16 @@ public class GettingStartedTest {
 		ctx.governmentDid = didResult.getDid();
 		ctx.governmentVkey = didResult.getVerkey();
 		
-		logInfo("DID Government: did={}, vkey={}", ctx.governmentDid, ctx.governmentVkey);
-		String nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.governmentDid, ctx.governmentVkey, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.governmentWallet, ctx.governmentDid, nymRequest).get();
-
-		// Create Did Steward => Government
-		
-		didResult = Did.createAndStoreMyDid(ctx.stewardWallet, "{}").get();
-		ctx.stewardDidForGovernment = didResult.getDid();
-		ctx.stewardVkeyForGovernment = didResult.getVerkey();
-
-		logInfo("DID StewardForGovernment: did={}, vkey={}", ctx.stewardDidForGovernment, ctx.stewardVkeyForGovernment);
-		nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.stewardDidForGovernment, ctx.stewardVkeyForGovernment, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.stewardWallet, ctx.stewardDidForGovernment, nymRequest).get();
-
-		// Create Did Government => Steward
-		
-		didResult = Did.createAndStoreMyDid(ctx.governmentWallet, "{}").get();
-		ctx.governmentDidForSteward = didResult.getDid();
-		ctx.governmentVkeyForSteward = didResult.getVerkey();
-		
-		logInfo("DID GovernmentForSteward: did={}, vkey={}", ctx.governmentDidForSteward, ctx.governmentVkeyForSteward);
-		nymRequest = Ledger.buildNymRequest(ctx.governmentDid, ctx.governmentDidForSteward, ctx.governmentVkeyForSteward, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.governmentWallet, ctx.governmentDidForSteward, nymRequest).get();
+		log.info("DID Government: did={}, vkey={}", ctx.governmentDid, ctx.governmentVkey);
+		String nymRequest = Ledger.buildNymRequest(ctx.trusteeDid, ctx.governmentDid, ctx.governmentVkey, null, ROLE_TRUSTEE).get();
+		signAndSubmitRequest(ctx, ctx.trusteeWallet, ctx.trusteeDid, nymRequest);
 	}
 	
 	void onboardFaberCollege(Context ctx) throws Exception {
 		
 		// Create Wallet for Faber
 		
-		logInfo("Create wallet - Faber");
+		log.info("Create wallet - Faber");
 		ctx.faberWalletConfig = new JSONObject().put("id", "Faber").toString();
 		ctx.faberWalletKey = new JSONObject().put("key", "faber_wallet_key").toString();
 		Wallet.createWallet(ctx.faberWalletConfig, ctx.faberWalletKey).get();
@@ -250,36 +216,16 @@ public class GettingStartedTest {
 		ctx.faberDid = didResult.getDid();
 		ctx.faberVkey = didResult.getVerkey();
 		
-		logInfo("DID Faber: did={}, vkey={}", ctx.faberDid, ctx.faberVkey);
-		String nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.faberDid, ctx.faberVkey, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.faberWallet, ctx.faberDid, nymRequest).get();
-
-		// Create Did Steward => Faber
-		
-		didResult = Did.createAndStoreMyDid(ctx.stewardWallet, "{}").get();
-		ctx.stewardDidForFaber = didResult.getDid();
-		ctx.stewardVkeyForFaber = didResult.getVerkey();
-
-		logInfo("DID StewardForFaber: did={}, vkey={}", ctx.stewardDidForFaber, ctx.stewardVkeyForFaber);
-		nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.stewardDidForFaber, ctx.stewardVkeyForFaber, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.stewardWallet, ctx.stewardDidForFaber, nymRequest).get();
-
-		// Create Did Faber => Steward
-		
-		didResult = Did.createAndStoreMyDid(ctx.faberWallet, "{}").get();
-		ctx.faberDidForSteward = didResult.getDid();
-		ctx.faberVkeyForSteward = didResult.getVerkey();
-		
-		logInfo("DID FaberForSteward: did={}, vkey={}", ctx.faberDidForSteward, ctx.faberVkeyForSteward);
-		nymRequest = Ledger.buildNymRequest(ctx.faberDid, ctx.faberDidForSteward, ctx.faberVkeyForSteward, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.faberWallet, ctx.faberDidForSteward, nymRequest).get();
+		log.info("DID Faber: did={}, vkey={}", ctx.faberDid, ctx.faberVkey);
+		String nymRequest = Ledger.buildNymRequest(ctx.governmentDid, ctx.faberDid, ctx.faberVkey, null, ROLE_ENDORSER).get();
+		signAndSubmitRequest(ctx, ctx.governmentWallet, ctx.governmentDid, nymRequest);
 	}
 	
 	void onboardAcmeCorp(Context ctx) throws Exception {
 		
 		// Create Wallet for Acme
 		
-		logInfo("Create wallet - Acme");
+		log.info("Create wallet - Acme");
 		ctx.acmeWalletConfig = new JSONObject().put("id", "Acme").toString();
 		ctx.acmeWalletKey = new JSONObject().put("key", "faber_wallet_key").toString();
 		Wallet.createWallet(ctx.acmeWalletConfig, ctx.acmeWalletKey).get();
@@ -292,36 +238,16 @@ public class GettingStartedTest {
 		ctx.acmeDid = didResult.getDid();
 		ctx.acmeVkey = didResult.getVerkey();
 		
-		logInfo("DID Acme: did={}, vkey={}", ctx.acmeDid, ctx.acmeVkey);
-		String nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.acmeDid, ctx.acmeVkey, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.acmeWallet, ctx.acmeDid, nymRequest).get();
-
-		// Create Did Steward => Acme
-		
-		didResult = Did.createAndStoreMyDid(ctx.stewardWallet, "{}").get();
-		ctx.stewardDidForAcme = didResult.getDid();
-		ctx.stewardVkeyForAcme = didResult.getVerkey();
-
-		logInfo("DID StewardForAcme: did={}, vkey={}", ctx.stewardDidForAcme, ctx.stewardVkeyForAcme);
-		nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.stewardDidForAcme, ctx.stewardVkeyForAcme, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.stewardWallet, ctx.stewardDidForAcme, nymRequest).get();
-
-		// Create Did Acme => Steward
-		
-		didResult = Did.createAndStoreMyDid(ctx.acmeWallet, "{}").get();
-		ctx.acmeDidForSteward = didResult.getDid();
-		ctx.acmeVkeyForSteward = didResult.getVerkey();
-		
-		logInfo("DID AcmeForSteward: did={}, vkey={}", ctx.acmeDidForSteward, ctx.acmeVkeyForSteward);
-		nymRequest = Ledger.buildNymRequest(ctx.acmeDid, ctx.acmeDidForSteward, ctx.acmeVkeyForSteward, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.acmeWallet, ctx.acmeDidForSteward, nymRequest).get();
+		log.info("DID Acme: did={}, vkey={}", ctx.acmeDid, ctx.acmeVkey);
+		String nymRequest = Ledger.buildNymRequest(ctx.governmentDid, ctx.acmeDid, ctx.acmeVkey, null, ROLE_ENDORSER).get();
+		signAndSubmitRequest(ctx, ctx.governmentWallet, ctx.governmentDid, nymRequest);
 	}
 	
 	void onboardThriftBank(Context ctx) throws Exception {
 		
 		// Create Wallet for Thrift
 		
-		logInfo("Create wallet - Thrift");
+		log.info("Create wallet - Thrift");
 		ctx.thriftWalletConfig = new JSONObject().put("id", "Thrift").toString();
 		ctx.thriftWalletKey = new JSONObject().put("key", "faber_wallet_key").toString();
 		Wallet.createWallet(ctx.thriftWalletConfig, ctx.thriftWalletKey).get();
@@ -334,29 +260,9 @@ public class GettingStartedTest {
 		ctx.thriftDid = didResult.getDid();
 		ctx.thriftVkey = didResult.getVerkey();
 		
-		logInfo("DID Thrift: did={}, vkey={}", ctx.thriftDid, ctx.thriftVkey);
-		String nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.thriftDid, ctx.thriftVkey, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.thriftWallet, ctx.thriftDid, nymRequest).get();
-
-		// Create Did Steward => Thrift
-		
-		didResult = Did.createAndStoreMyDid(ctx.stewardWallet, "{}").get();
-		ctx.stewardDidForThrift = didResult.getDid();
-		ctx.stewardVkeyForThrift = didResult.getVerkey();
-
-		logInfo("DID StewardForThrift: did={}, vkey={}", ctx.stewardDidForThrift, ctx.stewardVkeyForThrift);
-		nymRequest = Ledger.buildNymRequest(ctx.stewardDid, ctx.stewardDidForThrift, ctx.stewardVkeyForThrift, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.stewardWallet, ctx.stewardDidForThrift, nymRequest).get();
-
-		// Create Did Thrift => Steward
-		
-		didResult = Did.createAndStoreMyDid(ctx.thriftWallet, "{}").get();
-		ctx.thriftDidForSteward = didResult.getDid();
-		ctx.thriftVkeyForSteward = didResult.getVerkey();
-		
-		logInfo("DID ThriftForSteward: did={}, vkey={}", ctx.thriftDidForSteward, ctx.thriftVkeyForSteward);
-		nymRequest = Ledger.buildNymRequest(ctx.thriftDid, ctx.thriftDidForSteward, ctx.thriftVkeyForSteward, null, ROLE_ENDORSER).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.thriftWallet, ctx.thriftDidForSteward, nymRequest).get();
+		log.info("DID Thrift: did={}, vkey={}", ctx.thriftDid, ctx.thriftVkey);
+		String nymRequest = Ledger.buildNymRequest(ctx.governmentDid, ctx.thriftDid, ctx.thriftVkey, null, ROLE_ENDORSER).get();
+		signAndSubmitRequest(ctx, ctx.governmentWallet, ctx.governmentDid, nymRequest);
 	}
 	
 	void createTranscriptSchema(Context ctx) throws Exception {
@@ -364,30 +270,30 @@ public class GettingStartedTest {
 		// Schemas in indy are very simple JSON documents that specify their name and version, and that list attributes that will appear in a credential.
 		// Today, they do not describe data type, recurrence rules, nesting, and other elaborate constructs.
 		
-		String issuerDid = ctx.stewardDid;
-		Wallet issuerWallet = ctx.stewardWallet;
+		Wallet issuerWallet = ctx.faberWallet;
+		String issuerDid = ctx.faberDid;
 		
 		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(issuerDid, "Transcript", "1.2", new JSONArray(Arrays.asList("first_name","last_name","degree","status","year","average","ssn")).toString()).get();		
-		logInfo(schemaResult.toString());
+		log.info(schemaResult.toString());
 		Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
-		ctx.transcriptSchemaId = schemaResult.getSchemaId();
+		ctx.faberTranscriptSchemaId = schemaResult.getSchemaId();
 		
 		String schemaRequest = Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
-		Ledger.signAndSubmitRequest(ctx.pool, issuerWallet, issuerDid, schemaRequest).get();
+		signAndSubmitRequest(ctx, issuerWallet, issuerDid, schemaRequest);
 	}
 	
 	void createJobCertificateSchema(Context ctx) throws Exception {
 		
-		String issuerDid = ctx.stewardDid;
-		Wallet issuerWallet = ctx.stewardWallet;
+		Wallet issuerWallet = ctx.acmeWallet;
+		String issuerDid = ctx.acmeDid;
 		
 		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(issuerDid, "Job-Certificate", "0.2", new JSONArray(Arrays.asList("first_name","last_name","salary","employee_status","experience")).toString()).get();
-		logInfo(schemaResult.toString());
+		log.info(schemaResult.toString());
 		Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
-		ctx.jobCertificateSchemaId = schemaResult.getSchemaId();
+		ctx.acmeJobCertificateSchemaId = schemaResult.getSchemaId();
 		
 		String schemaRequest = Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
-		Ledger.signAndSubmitRequest(ctx.pool, issuerWallet, issuerDid, schemaRequest).get();
+		signAndSubmitRequest(ctx, issuerWallet, issuerDid, schemaRequest);
 	}
 	
 	void createTranscriptCredentialDefinition(Context ctx) throws Exception {
@@ -400,30 +306,30 @@ public class GettingStartedTest {
 		
 		// Faber Credential Definition Setup
 		
-		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.faberDid, ctx.transcriptSchemaId).get();
+		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.faberDid, ctx.faberTranscriptSchemaId).get();
 		String getSchemaResponse = Ledger.submitRequest(ctx.pool, getSchemaRequest).get();
 		ParseResponseResult parseSchemaResult = Ledger.parseGetSchemaResponse(getSchemaResponse).get();
-		logInfo(getSchemaResponse);
+		log.info(getSchemaResponse);
 		
 		String configJson = new JSONObject().put("support_revocation", false).toString();
 		IssuerCreateAndStoreCredentialDefResult createCredDefResult = Anoncreds.issuerCreateAndStoreCredentialDef(ctx.faberWallet, ctx.faberDid, parseSchemaResult.getObjectJson(), "TAG1", null, configJson).get();
 		String transcriptCredDefId = createCredDefResult.getCredDefId();
 
 		String credDefRequest = Ledger.buildCredDefRequest(ctx.faberDid, createCredDefResult.getCredDefJson()).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.faberWallet, ctx.faberDid, credDefRequest).get();
+		signAndSubmitRequest(ctx, ctx.faberWallet, ctx.faberDid, credDefRequest);
 		
 		String getCredDefRequest = Ledger.buildGetCredDefRequest(ctx.faberDid, transcriptCredDefId).get();
 		String transcriptGetCredDefResponse = Ledger.submitRequest(ctx.pool, getCredDefRequest).get();
-		logInfo(transcriptGetCredDefResponse);
+		log.info(transcriptGetCredDefResponse);
 	}
 	
 	void createJobCertificateCredentialDefinition(Context ctx) throws Exception {
 		
 		// Acme Credential Definition Setup
 
-		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.acmeDid, ctx.jobCertificateSchemaId).get();
+		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.acmeDid, ctx.acmeJobCertificateSchemaId).get();
 		String getSchemaResponse = Ledger.submitRequest(ctx.pool, getSchemaRequest).get();
-		logInfo(getSchemaResponse);
+		log.info(getSchemaResponse);
 		
 		String configJson = new JSONObject().put("support_revocation", false).toString();
 		ParseResponseResult parseSchemaResult = Ledger.parseGetSchemaResponse(getSchemaResponse).get();
@@ -431,24 +337,36 @@ public class GettingStartedTest {
 		String jobCertificateCredDefId = createCredDefResult.getCredDefId();
 
 		String credDefRequest = Ledger.buildCredDefRequest(ctx.acmeDid, createCredDefResult.getCredDefJson()).get();
-		Ledger.signAndSubmitRequest(ctx.pool, ctx.acmeWallet, ctx.acmeDid, credDefRequest).get();
+		signAndSubmitRequest(ctx, ctx.acmeWallet, ctx.acmeDid, credDefRequest);
 		
 		String getCredDefRequest = Ledger.buildGetCredDefRequest(ctx.acmeDid, jobCertificateCredDefId).get();
 		String jobCertificateGetCredDefResponse = Ledger.submitRequest(ctx.pool, getCredDefRequest).get();
-		logInfo(jobCertificateGetCredDefResponse);
+		log.info(jobCertificateGetCredDefResponse);
 	}
 	
+	private String signAndSubmitRequest(Context ctx, Wallet endorserWallet, String endorserDid, String req) throws Exception {
+		String res = Ledger.signAndSubmitRequest(ctx.pool, endorserWallet, endorserDid, req).get();
+		if ("REPLY".equals(new JSONObject(res).get("op"))) {
+			log.info("SubmitRequest: " + req);
+			log.info("SubmitResponse: " + res);
+		} else {
+			log.warn("SubmitRequest: " + req);
+			log.warn("SubmitResponse: " + res);
+		}
+		return res.toString();
+	}
+
 	void closeAndDeletePoolLedger(Context ctx) throws Exception {
 		
-		logInfo("Close Wallets");
+		log.info("Close Wallets");
 		
 		closeAndDeleteWallet(ctx.thriftWallet, ctx.thriftWalletConfig, ctx.thriftWalletKey);
 		closeAndDeleteWallet(ctx.acmeWallet, ctx.acmeWalletConfig, ctx.acmeWalletKey);
 		closeAndDeleteWallet(ctx.faberWallet, ctx.faberWalletConfig, ctx.faberWalletKey);
 		closeAndDeleteWallet(ctx.governmentWallet, ctx.governmentWalletConfig, ctx.governmentWalletKey);
-		closeAndDeleteWallet(ctx.stewardWallet, ctx.stewardWalletConfig, ctx.stewardWalletKey);
+		closeAndDeleteWallet(ctx.trusteeWallet, ctx.trusteeWalletConfig, ctx.trusteeWalletKey);
 		
-		logInfo("Close and Delete Pool Ledger");
+		log.info("Close and Delete Pool Ledger");
 
 		ctx.pool.closePoolLedger().get();
 		Pool.deletePoolLedgerConfig(ctx.poolName).get();
@@ -459,9 +377,5 @@ public class GettingStartedTest {
 			wallet.closeWallet().get();
 			Wallet.deleteWallet(config, key).get();
 		}
-	}
-	
-	private void logInfo(String msg, Object... args) {
-		log.info(msg, args);
 	}
 }
