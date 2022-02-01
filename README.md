@@ -22,7 +22,7 @@ Shouldn't we have in fact a [self sovereign identity](https://www.manning.com/bo
 [Getting Started](https://hyperledger-indy.readthedocs.io/projects/sdk/en/latest/docs/getting-started/)
 
 ```
-docker-compose -f ./docs/getting-started/getting-started.yml up
+docker-compose -f ./docs/getting-started/docker-compose.yml up
 ```
 
 ### Start local nodes pool with docker
@@ -33,6 +33,18 @@ Here is how you can run a local nodes pool.
 INDY_VERSION=1.16.0
 INDY_CONTENT_URL="https://raw.githubusercontent.com/hyperledger/indy-sdk"
 docker build -t nessusio/indy-pool "${INDY_CONTENT_URL}/v${INDY_VERSION}/ci/indy-pool.dockerfile"
+
+docker run --detach \
+  --name=indy-pool \
+  -p 9701-9708:9701-9708 \
+  nessusio/indy-pool
+```
+
+for the latest, use ...
+
+```
+INDY_CONTENT_URL="https://raw.githubusercontent.com/hyperledger/indy-sdk"
+docker build -t nessusio/indy-pool "${INDY_CONTENT_URL}/master/ci/indy-pool.dockerfile"
 
 docker run --detach \
   --name=indy-pool \
