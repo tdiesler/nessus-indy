@@ -24,10 +24,13 @@ import static io.nessus.indy.utils.IndyConstants.ROLE_ENDORSER;
 import static io.nessus.indy.utils.IndyConstants.ROLE_TRUSTEE;
 
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds;
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateAndStoreCredentialDefResult;
+import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateCredentialResult;
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult;
+import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.ProverCreateCredentialRequestResult;
 import org.hyperledger.indy.sdk.did.Did;
 import org.hyperledger.indy.sdk.did.DidResults.CreateAndStoreMyDidResult;
 import org.hyperledger.indy.sdk.ledger.Ledger;
@@ -89,7 +92,8 @@ public class GettingStartedTest {
 		Wallet faberWallet;
 		String faberDid;
 		String faberVkey;
-		String faberTranscriptSchemaId;
+		String transcriptSchemaId;
+		String transcriptCredDefId;
 		
 		// Acme
 		String acmeWalletConfig;
@@ -97,7 +101,8 @@ public class GettingStartedTest {
 		Wallet acmeWallet;
 		String acmeDid;
 		String acmeVkey;
-		String acmeJobCertificateSchemaId;
+		String jobCertificateSchemaId;
+		String jobCertificateCredDefId;
 		
 		// Thrift
 		String thriftWalletConfig;
@@ -105,6 +110,13 @@ public class GettingStartedTest {
 		Wallet thriftWallet;
 		String thriftDid;
 		String thriftVkey;
+		
+		// Alice
+		String aliceWalletConfig;
+		String aliceWalletKey;
+		Wallet aliceWallet;
+		String aliceDid;
+		String aliceVkey;
 	}
 	
 	@Test
@@ -120,12 +132,13 @@ public class GettingStartedTest {
 		
 		createTrustee(ctx);
 		
-		// Onboarding Government, Faber, Acme, Thrift as Trust Anchors
+		// Onboarding Government, Faber, Acme, Thrift 
 		
 		onboardGovernment(ctx);
 		onboardFaberCollege(ctx);
 		onboardAcmeCorp(ctx);
 		onboardThriftBank(ctx);
+		onboardAlice(ctx);
 		
 		// Creating Credential Schemas
 		
@@ -136,6 +149,10 @@ public class GettingStartedTest {
 		
 		createTranscriptCredentialDefinition(ctx);
 		createJobCertificateCredentialDefinition(ctx);
+		
+		// Getting Transcript with Faber
+		
+		gettingTranscriptWithFaber(ctx);
 		
 		// Close and Delete Indy Pool Nodes
 		
@@ -227,7 +244,7 @@ public class GettingStartedTest {
 		
 		log.info("Create wallet - Acme");
 		ctx.acmeWalletConfig = new JSONObject().put("id", "Acme").toString();
-		ctx.acmeWalletKey = new JSONObject().put("key", "faber_wallet_key").toString();
+		ctx.acmeWalletKey = new JSONObject().put("key", "acme_wallet_key").toString();
 		Wallet.createWallet(ctx.acmeWalletConfig, ctx.acmeWalletKey).get();
 		ctx.acmeWallet = Wallet.openWallet(ctx.acmeWalletConfig, ctx.acmeWalletKey).get();
 		
@@ -249,7 +266,7 @@ public class GettingStartedTest {
 		
 		log.info("Create wallet - Thrift");
 		ctx.thriftWalletConfig = new JSONObject().put("id", "Thrift").toString();
-		ctx.thriftWalletKey = new JSONObject().put("key", "faber_wallet_key").toString();
+		ctx.thriftWalletKey = new JSONObject().put("key", "thrift_wallet_key").toString();
 		Wallet.createWallet(ctx.thriftWalletConfig, ctx.thriftWalletKey).get();
 		ctx.thriftWallet = Wallet.openWallet(ctx.thriftWalletConfig, ctx.thriftWalletKey).get();
 		
@@ -265,6 +282,28 @@ public class GettingStartedTest {
 		signAndSubmitRequest(ctx, ctx.governmentWallet, ctx.governmentDid, nymRequest);
 	}
 	
+	void onboardAlice(Context ctx) throws Exception {
+		
+		// Create Wallet for Alice
+		
+		log.info("Create wallet - Alice");
+		ctx.aliceWalletConfig = new JSONObject().put("id", "Alice").toString();
+		ctx.aliceWalletKey = new JSONObject().put("key", "alice").toString();
+		Wallet.createWallet(ctx.aliceWalletConfig, ctx.aliceWalletKey).get();
+		ctx.aliceWallet = Wallet.openWallet(ctx.aliceWalletConfig, ctx.aliceWalletKey).get();
+		
+		// Getting Credential for Alice
+		
+		String aliceSeed = new JSONObject().put("seed", "00000000000000000000000000Alice1").toString();
+		CreateAndStoreMyDidResult didResult = Did.createAndStoreMyDid(ctx.aliceWallet, aliceSeed).get();
+		ctx.aliceDid = didResult.getDid();
+		ctx.aliceVkey = didResult.getVerkey();
+		
+		log.info("DID Alice: did={}, vkey={}", ctx.aliceDid, ctx.aliceVkey);
+		String nymRequest = Ledger.buildNymRequest(ctx.governmentDid, ctx.aliceDid, ctx.aliceVkey, null, null).get();
+		signAndSubmitRequest(ctx, ctx.governmentWallet, ctx.governmentDid, nymRequest);
+	}
+	
 	void createTranscriptSchema(Context ctx) throws Exception {
 		
 		// Schemas in indy are very simple JSON documents that specify their name and version, and that list attributes that will appear in a credential.
@@ -276,7 +315,7 @@ public class GettingStartedTest {
 		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(issuerDid, "Transcript", "1.2", new JSONArray(Arrays.asList("first_name","last_name","degree","status","year","average","ssn")).toString()).get();		
 		log.info(schemaResult.toString());
 		Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
-		ctx.faberTranscriptSchemaId = schemaResult.getSchemaId();
+		ctx.transcriptSchemaId = schemaResult.getSchemaId();
 		
 		String schemaRequest = Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
 		signAndSubmitRequest(ctx, issuerWallet, issuerDid, schemaRequest);
@@ -290,7 +329,7 @@ public class GettingStartedTest {
 		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(issuerDid, "Job-Certificate", "0.2", new JSONArray(Arrays.asList("first_name","last_name","salary","employee_status","experience")).toString()).get();
 		log.info(schemaResult.toString());
 		Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
-		ctx.acmeJobCertificateSchemaId = schemaResult.getSchemaId();
+		ctx.jobCertificateSchemaId = schemaResult.getSchemaId();
 		
 		String schemaRequest = Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
 		signAndSubmitRequest(ctx, issuerWallet, issuerDid, schemaRequest);
@@ -306,46 +345,94 @@ public class GettingStartedTest {
 		
 		// Faber Credential Definition Setup
 		
-		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.faberDid, ctx.faberTranscriptSchemaId).get();
+		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.faberDid, ctx.transcriptSchemaId).get();
 		String getSchemaResponse = Ledger.submitRequest(ctx.pool, getSchemaRequest).get();
 		ParseResponseResult parseSchemaResult = Ledger.parseGetSchemaResponse(getSchemaResponse).get();
 		log.info(getSchemaResponse);
 		
 		String configJson = new JSONObject().put("support_revocation", false).toString();
 		IssuerCreateAndStoreCredentialDefResult createCredDefResult = Anoncreds.issuerCreateAndStoreCredentialDef(ctx.faberWallet, ctx.faberDid, parseSchemaResult.getObjectJson(), "TAG1", null, configJson).get();
-		String transcriptCredDefId = createCredDefResult.getCredDefId();
+		ctx.transcriptCredDefId = createCredDefResult.getCredDefId();
 
 		String credDefRequest = Ledger.buildCredDefRequest(ctx.faberDid, createCredDefResult.getCredDefJson()).get();
 		signAndSubmitRequest(ctx, ctx.faberWallet, ctx.faberDid, credDefRequest);
-		
-		String getCredDefRequest = Ledger.buildGetCredDefRequest(ctx.faberDid, transcriptCredDefId).get();
-		String transcriptGetCredDefResponse = Ledger.submitRequest(ctx.pool, getCredDefRequest).get();
-		log.info(transcriptGetCredDefResponse);
+
+		String getCredDefRequest = Ledger.buildGetCredDefRequest(ctx.faberDid, ctx.transcriptCredDefId).get();
+		String getCredDefResponse = Ledger.submitRequest(ctx.pool, getCredDefRequest).get();
+		log.info(getCredDefResponse);
 	}
 	
 	void createJobCertificateCredentialDefinition(Context ctx) throws Exception {
 		
 		// Acme Credential Definition Setup
 
-		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.acmeDid, ctx.acmeJobCertificateSchemaId).get();
+		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.acmeDid, ctx.jobCertificateSchemaId).get();
 		String getSchemaResponse = Ledger.submitRequest(ctx.pool, getSchemaRequest).get();
 		log.info(getSchemaResponse);
 		
 		String configJson = new JSONObject().put("support_revocation", false).toString();
 		ParseResponseResult parseSchemaResult = Ledger.parseGetSchemaResponse(getSchemaResponse).get();
 		IssuerCreateAndStoreCredentialDefResult createCredDefResult = Anoncreds.issuerCreateAndStoreCredentialDef(ctx.acmeWallet, ctx.acmeDid, parseSchemaResult.getObjectJson(), "TAG1", null, configJson).get();
-		String jobCertificateCredDefId = createCredDefResult.getCredDefId();
+		ctx.jobCertificateCredDefId = createCredDefResult.getCredDefId();
 
 		String credDefRequest = Ledger.buildCredDefRequest(ctx.acmeDid, createCredDefResult.getCredDefJson()).get();
 		signAndSubmitRequest(ctx, ctx.acmeWallet, ctx.acmeDid, credDefRequest);
-		
-		String getCredDefRequest = Ledger.buildGetCredDefRequest(ctx.acmeDid, jobCertificateCredDefId).get();
-		String jobCertificateGetCredDefResponse = Ledger.submitRequest(ctx.pool, getCredDefRequest).get();
-		log.info(jobCertificateGetCredDefResponse);
+
+		String getCredDefRequest = Ledger.buildGetCredDefRequest(ctx.acmeDid, ctx.jobCertificateCredDefId).get();
+		String getCredDefResponse = Ledger.submitRequest(ctx.pool, getCredDefRequest).get();
+		log.info(getCredDefResponse);
 	}
 	
-	private String signAndSubmitRequest(Context ctx, Wallet endorserWallet, String endorserDid, String req) throws Exception {
-		String res = Ledger.signAndSubmitRequest(ctx.pool, endorserWallet, endorserDid, req).get();
+	void gettingTranscriptWithFaber(Context ctx) throws Exception {
+		
+		// Faber creates a Transcript Credential Offer for Alice
+		
+		String transcriptCredOffer = Anoncreds.issuerCreateCredentialOffer(ctx.faberWallet, ctx.transcriptCredDefId).get();
+		String transcriptCredDefId = new JSONObject(transcriptCredOffer).getString("cred_def_id");
+		
+		// Alice creates a Master Secret in her Wallet
+		
+		String masterSecretId = Anoncreds.proverCreateMasterSecret(ctx.aliceWallet, null).get();
+		
+		// Alice gets Credential Definition from Ledger
+		
+		// [TODO] Use pairwise DID Alice => Faber
+		String credDefResponse = submitRequest(ctx, Ledger.buildGetCredDefRequest(ctx.aliceDid, transcriptCredDefId).get());
+		String transcriptCredDef = Ledger.parseGetCredDefResponse(credDefResponse).get().getObjectJson();
+				
+		// Alice creates Transcript Credential Request for Faber
+		
+		ProverCreateCredentialRequestResult credentialRequestResult = Anoncreds.proverCreateCredentialReq(ctx.aliceWallet, ctx.aliceDid, transcriptCredOffer, transcriptCredDef, masterSecretId).get();
+		String credentialRequestJson = credentialRequestResult.getCredentialRequestJson();
+		String credentialRequestMetadataJson = credentialRequestResult.getCredentialRequestMetadataJson();
+		
+		// Faber creates Transcript Credential for Alice
+		
+		String credValuesJson = new JSONObject()
+			.put("first_name", new JSONObject().put("raw", "Alice").put("encoded", "1139481716457488690172217916278103335"))
+			.put("last_name", new JSONObject().put("raw", "Garcia").put("encoded", "5321642780241790123587902456789123452"))
+			.put("degree", new JSONObject().put("raw", "Bachelor of Science, Marketing").put("encoded", "12434523576212321"))
+			.put("status", new JSONObject().put("raw", "graduated").put("encoded", "2213454313412354"))
+			.put("ssn", new JSONObject().put("raw", "123-45-6789").put("encoded", "3124141231422543541"))
+			.put("year", new JSONObject().put("raw", "2015").put("encoded", "2015"))
+			.put("average", new JSONObject().put("raw", "5").put("encoded", "5")).toString();
+		
+		IssuerCreateCredentialResult issuerCredentialResult = Anoncreds.issuerCreateCredential(ctx.faberWallet, transcriptCredOffer, credentialRequestJson, credValuesJson, null, 0).get();
+		String transcriptCredJson = issuerCredentialResult.getCredentialJson();
+		log.info("IssuedCredential: " + transcriptCredJson);
+		
+		// Alice stores Transcript Credential from Faber
+		
+		String transcriptCredentialId = Anoncreds.proverStoreCredential(ctx.aliceWallet, null, credentialRequestMetadataJson, transcriptCredJson, transcriptCredDef, null).get();
+		log.info("Transcript CredentialId: " + transcriptCredentialId);
+	}
+	
+	private String signAndSubmitRequest(Context ctx, Wallet endorserWallet, String endorserDid, String request) throws Exception {
+		return submitRequest(ctx, Ledger.signRequest(endorserWallet, endorserDid, request).get());
+	}
+
+	private String submitRequest(Context ctx, String req) throws Exception {
+		String res = Ledger.submitRequest(ctx.pool, req).get();
 		if ("REPLY".equals(new JSONObject(res).get("op"))) {
 			log.info("SubmitRequest: " + req);
 			log.info("SubmitResponse: " + res);
@@ -360,6 +447,7 @@ public class GettingStartedTest {
 		
 		log.info("Close Wallets");
 		
+		closeAndDeleteWallet(ctx.aliceWallet, ctx.aliceWalletConfig, ctx.aliceWalletKey);
 		closeAndDeleteWallet(ctx.thriftWallet, ctx.thriftWalletConfig, ctx.thriftWalletKey);
 		closeAndDeleteWallet(ctx.acmeWallet, ctx.acmeWalletConfig, ctx.acmeWalletKey);
 		closeAndDeleteWallet(ctx.faberWallet, ctx.faberWalletConfig, ctx.faberWalletKey);
