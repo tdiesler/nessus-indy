@@ -22,15 +22,16 @@ package io.nessus.indy.test;
 
 import static io.nessus.indy.utils.IndyConstants.ROLE_ENDORSER;
 import static io.nessus.indy.utils.IndyConstants.ROLE_TRUSTEE;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
 
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds;
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateAndStoreCredentialDefResult;
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateCredentialResult;
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.IssuerCreateSchemaResult;
 import org.hyperledger.indy.sdk.anoncreds.AnoncredsResults.ProverCreateCredentialRequestResult;
+import org.hyperledger.indy.sdk.anoncreds.CredentialsSearchForProofReq;
 import org.hyperledger.indy.sdk.did.Did;
 import org.hyperledger.indy.sdk.did.DidResults.CreateAndStoreMyDidResult;
 import org.hyperledger.indy.sdk.ledger.Ledger;
@@ -117,6 +118,7 @@ public class GettingStartedTest {
 		Wallet aliceWallet;
 		String aliceDid;
 		String aliceVkey;
+		String aliceMasterSecretId;
 	}
 	
 	@Test
@@ -150,9 +152,13 @@ public class GettingStartedTest {
 		createTranscriptCredentialDefinition(ctx);
 		createJobCertificateCredentialDefinition(ctx);
 		
-		// Getting Transcript with Faber
+		// Alice gets her Transcript from Faber College
 		
-		gettingTranscriptWithFaber(ctx);
+		getTranscriptFromFaber(ctx);
+		
+		// Alice applies for a job with Acme
+		
+		applyForJobWithAcme(ctx);
 		
 		// Close and Delete Indy Pool Nodes
 		
@@ -312,7 +318,9 @@ public class GettingStartedTest {
 		Wallet issuerWallet = ctx.faberWallet;
 		String issuerDid = ctx.faberDid;
 		
-		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(issuerDid, "Transcript", "1.2", new JSONArray(Arrays.asList("first_name","last_name","degree","status","year","average","ssn")).toString()).get();		
+		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(issuerDid, "Transcript", "1.2", 
+				new JSONArray(Arrays.asList("first_name","last_name","degree","status","year","average","ssn")).toString()).get();
+		
 		log.info(schemaResult.toString());
 		Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
 		ctx.transcriptSchemaId = schemaResult.getSchemaId();
@@ -326,7 +334,9 @@ public class GettingStartedTest {
 		Wallet issuerWallet = ctx.acmeWallet;
 		String issuerDid = ctx.acmeDid;
 		
-		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(issuerDid, "Job-Certificate", "0.2", new JSONArray(Arrays.asList("first_name","last_name","salary","employee_status","experience")).toString()).get();
+		IssuerCreateSchemaResult schemaResult = Anoncreds.issuerCreateSchema(issuerDid, "Job-Certificate", "0.2", 
+				new JSONArray(Arrays.asList("first_name","last_name","salary","employee_status","experience")).toString()).get();
+		
 		log.info(schemaResult.toString());
 		Ledger.buildSchemaRequest(issuerDid, schemaResult.getSchemaJson()).get();
 		ctx.jobCertificateSchemaId = schemaResult.getSchemaId();
@@ -383,7 +393,7 @@ public class GettingStartedTest {
 		log.info(getCredDefResponse);
 	}
 	
-	void gettingTranscriptWithFaber(Context ctx) throws Exception {
+	void getTranscriptFromFaber(Context ctx) throws Exception {
 		
 		// Faber creates a Transcript Credential Offer for Alice
 		
@@ -392,7 +402,7 @@ public class GettingStartedTest {
 		
 		// Alice creates a Master Secret in her Wallet
 		
-		String masterSecretId = Anoncreds.proverCreateMasterSecret(ctx.aliceWallet, null).get();
+		ctx.aliceMasterSecretId = Anoncreds.proverCreateMasterSecret(ctx.aliceWallet, null).get();
 		
 		// Alice gets Credential Definition from Ledger
 		
@@ -402,7 +412,7 @@ public class GettingStartedTest {
 				
 		// Alice creates Transcript Credential Request for Faber
 		
-		ProverCreateCredentialRequestResult credentialRequestResult = Anoncreds.proverCreateCredentialReq(ctx.aliceWallet, ctx.aliceDid, transcriptCredOffer, transcriptCredDef, masterSecretId).get();
+		ProverCreateCredentialRequestResult credentialRequestResult = Anoncreds.proverCreateCredentialReq(ctx.aliceWallet, ctx.aliceDid, transcriptCredOffer, transcriptCredDef, ctx.aliceMasterSecretId).get();
 		String credentialRequestJson = credentialRequestResult.getCredentialRequestJson();
 		String credentialRequestMetadataJson = credentialRequestResult.getCredentialRequestMetadataJson();
 		
@@ -425,6 +435,109 @@ public class GettingStartedTest {
 		
 		String transcriptCredentialId = Anoncreds.proverStoreCredential(ctx.aliceWallet, null, credentialRequestMetadataJson, transcriptCredJson, transcriptCredDef, null).get();
 		log.info("Transcript CredentialId: " + transcriptCredentialId);
+	}
+	
+	void applyForJobWithAcme(Context ctx) throws Exception {
+		
+		// Acme creates a Job Application Proof Request
+		
+		String nonce = Anoncreds.generateNonce().get();
+		JSONArray credDefRestrictions = new JSONArray().put(new JSONObject().put("cred_def_id", ctx.transcriptCredDefId));
+		
+		String proofRequestJson = new JSONObject()
+			.put("nonce", nonce)
+			.put("name", "Job-Application")
+			.put("version", "0.1")
+			.put("requested_attributes", new JSONObject()
+				.put("attr1_referent", new JSONObject().put("name", "first_name"))
+				.put("attr2_referent", new JSONObject().put("name", "last_name"))
+				.put("attr3_referent", new JSONObject().put("name", "degree").put("restrictions", credDefRestrictions))
+				.put("attr4_referent", new JSONObject().put("name", "status").put("restrictions", credDefRestrictions))
+				.put("attr5_referent", new JSONObject().put("name", "ssn").put("restrictions", credDefRestrictions))
+				.put("attr6_referent", new JSONObject().put("name", "year").put("restrictions", credDefRestrictions))
+			)
+			.put("requested_predicates", new JSONObject()
+				.put("predicate1_referent", new JSONObject()
+					.put("name", "average")
+					.put("p_type", ">=")
+					.put("p_value", 4)
+					.put("restrictions", credDefRestrictions)
+					)
+			).toString();
+		log.info("JobApplication Proof Request: " + proofRequestJson);
+		
+		// Alice gets Credentials for Job Application Proof Request
+		
+		CredentialsSearchForProofReq credentialsSearch = CredentialsSearchForProofReq.open(ctx.aliceWallet, proofRequestJson, null).get();
+		
+		JSONArray credentialsForAttribute3 = new JSONArray(credentialsSearch.fetchNextCredentials("attr3_referent", 100).get());
+		String credentialIdForAttribute3 = credentialsForAttribute3.getJSONObject(0).getJSONObject("cred_info").getString("referent");
+
+		JSONArray credentialsForAttribute4 = new JSONArray(credentialsSearch.fetchNextCredentials("attr4_referent", 100).get());
+		String credentialIdForAttribute4 = credentialsForAttribute4.getJSONObject(0).getJSONObject("cred_info").getString("referent");
+
+		JSONArray credentialsForAttribute5 = new JSONArray(credentialsSearch.fetchNextCredentials("attr5_referent", 100).get());
+		String credentialIdForAttribute5 = credentialsForAttribute5.getJSONObject(0).getJSONObject("cred_info").getString("referent");
+
+		JSONArray credentialsForAttribute6 = new JSONArray(credentialsSearch.fetchNextCredentials("attr6_referent", 100).get());
+		String credentialIdForAttribute6 = credentialsForAttribute6.getJSONObject(0).getJSONObject("cred_info").getString("referent");
+
+		JSONArray credentialsForPredicate1 = new JSONArray(credentialsSearch.fetchNextCredentials("predicate1_referent", 100).get());
+		String credentialIdForPredicate1 = credentialsForPredicate1.getJSONObject(0).getJSONObject("cred_info").getString("referent");
+		
+		credentialsSearch.close();
+		
+		// Alice provides Job Application Proof
+		
+		String requestedCredentialsJson = new JSONObject()
+			.put("self_attested_attributes", new JSONObject()
+					.put("attr1_referent", "Alice")
+					.put("attr2_referent", "Garcia"))
+			.put("requested_attributes", new JSONObject()
+				.put("attr3_referent", new JSONObject()
+					.put("cred_id", credentialIdForAttribute3)
+					.put("revealed", true))
+				.put("attr4_referent", new JSONObject()
+					.put("cred_id", credentialIdForAttribute4)
+					.put("revealed", true))
+				.put("attr5_referent", new JSONObject()
+					.put("cred_id", credentialIdForAttribute5)
+					.put("revealed", true))
+				.put("attr6_referent", new JSONObject()
+					.put("cred_id", credentialIdForAttribute6)
+					.put("revealed", true)))
+			.put("requested_predicates", new JSONObject()
+					.put("predicate1_referent", new JSONObject()
+						.put("cred_id",credentialIdForPredicate1)))
+			.toString();
+		
+		String getSchemaRequest = Ledger.buildGetSchemaRequest(ctx.faberDid, ctx.transcriptSchemaId).get();
+		String getSchemaResponse = Ledger.submitRequest(ctx.pool, getSchemaRequest).get();
+		ParseResponseResult parseSchemaResult = Ledger.parseGetSchemaResponse(getSchemaResponse).get();
+		String schemaJson = parseSchemaResult.getObjectJson();
+		
+		String getCredDefRequest = Ledger.buildGetCredDefRequest(ctx.faberDid, ctx.transcriptCredDefId).get();
+		String getCredDefResponse = Ledger.submitRequest(ctx.pool, getCredDefRequest).get();
+		ParseResponseResult parseCredDefResponse = Ledger.parseGetCredDefResponse(getCredDefResponse).get();
+		String credDefJson = parseCredDefResponse.getObjectJson();
+		
+		String schemas = new JSONObject().put(ctx.transcriptSchemaId, new JSONObject(schemaJson)).toString();
+		String credDefs = new JSONObject().put(ctx.transcriptCredDefId,  new JSONObject(credDefJson)).toString();
+
+		String proofJson = Anoncreds.proverCreateProof(ctx.aliceWallet, proofRequestJson, requestedCredentialsJson, ctx.aliceMasterSecretId, schemas, credDefs, "{}").get();
+		JSONObject selfAttestedAttrs = new JSONObject(proofJson).getJSONObject("requested_proof").getJSONObject("self_attested_attrs");
+		JSONObject revealedAttrs = new JSONObject(proofJson).getJSONObject("requested_proof").getJSONObject("revealed_attrs");
+		log.info("SelfAttestedAttrs: " + selfAttestedAttrs);
+		log.info("RevealedAttrs: " + revealedAttrs);
+		
+		// Acme verifies Job Application Proof for Alice
+		
+		assertEquals("Alice", selfAttestedAttrs.getString("attr1_referent"));
+		assertEquals("Garcia", selfAttestedAttrs.getString("attr2_referent"));
+		assertEquals("Bachelor of Science, Marketing", revealedAttrs.getJSONObject("attr3_referent").getString("raw"));
+		assertEquals("graduated", revealedAttrs.getJSONObject("attr4_referent").getString("raw"));
+		assertEquals("123-45-6789", revealedAttrs.getJSONObject("attr5_referent").getString("raw"));
+		assertEquals("2015", revealedAttrs.getJSONObject("attr6_referent").getString("raw"));
 	}
 	
 	private String signAndSubmitRequest(Context ctx, Wallet endorserWallet, String endorserDid, String request) throws Exception {
