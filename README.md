@@ -17,15 +17,7 @@ Shouldn't we have in fact a [self sovereign identity](https://www.manning.com/bo
 * [The Story of Open SSI Standards](https://www.youtube.com/watch?v=RllH91rcFdE)
 * [Hyperledger Indy](https://hyperledger-indy.readthedocs.io)
 
-## Getting Started with Indy SDK
-
-[Getting Started](https://hyperledger-indy.readthedocs.io/projects/sdk/en/latest/docs/getting-started/)
-
-```
-docker-compose -f ./docs/getting-started/docker-compose.yml up
-```
-
-### Start local nodes pool with docker
+## Start local nodes pool with docker
 
 Here is how you can run a local nodes pool.
 
@@ -55,12 +47,20 @@ docker run --detach \
 More details [here](https://github.com/hyperledger/indy-sdk#how-to-start-local-nodes-pool-with-docker)
 
 
-### Install libindy & indy-cli
+## Getting Started with Indy SDK
+
+[Getting Started](https://hyperledger-indy.readthedocs.io/projects/sdk/en/latest/docs/getting-started/)
+
+```
+docker-compose -f ./docs/getting-started/docker-compose.yml up
+```
+
+## Install libindy & indy-cli
 
 How to install libindy is documented [here](https://github.com/hyperledger/indy-sdk/tree/master#installing-the-sdk)
 and indy-cli [here](https://github.com/hyperledger/indy-sdk/tree/master/cli)
 
-#### CentOS
+### CentOS
 
 Install details are [here](https://github.com/hyperledger/indy-sdk#centos)
 
@@ -78,7 +78,7 @@ sudo yum install -y ncurses-compat-libs openssl compat-openssl10 zeromq
 sudo rpm -i indy-cli.${INDY_VERSION}.rpm
 ```
 
-#### MacOS
+### MacOS
 
 Install details are [here](https://github.com/hyperledger/indy-sdk#macos)
 

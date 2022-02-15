@@ -10,12 +10,7 @@ networks:
 
 services:
   indy_pool:
-    build:
-      context: .
-      args:
-         pool_ip: 10.0.0.2
-      dockerfile: indy-pool.dockerfile
-    image: nessusio/getting-started-pool
+    image: nessusio/indy-pool
     container_name: getting-started-pool
     working_dir: /home/indy
     ports:
