@@ -49,7 +49,8 @@ More details [here](https://github.com/hyperledger/indy-sdk#how-to-start-local-n
 
 ## Getting Started with Indy SDK
 
-[Getting Started](https://hyperledger-indy.readthedocs.io/projects/sdk/en/latest/docs/getting-started/)
+Have a look at [getting started](https://hyperledger-indy.readthedocs.io/projects/sdk/en/latest/docs/getting-started/)
+that is part of the Indy SDK docs.
 
 ```
 docker-compose -f ./docs/getting-started/docker-compose.yml up

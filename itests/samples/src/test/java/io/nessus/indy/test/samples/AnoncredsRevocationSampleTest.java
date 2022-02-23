@@ -97,10 +97,6 @@ public class AnoncredsRevocationSampleTest {
 		String credDefJson = createCredDefResult.getCredDefJson();
 
 		//6. Issuer create Revocation Registry
-		String revRegDefConfig = new JSONObject()
-				.put("issuance_type", "ISSUANCE_ON_DEMAND")
-				.put("max_cred_num", 5)
-				.toString();
 		String tailsWriterConfig = new JSONObject()
 				.put("base_dir", EnvironmentUtils.getIndyHomePath("tails").replace('\\', '/'))
 				.put("uri_pattern", "")
@@ -108,6 +104,10 @@ public class AnoncredsRevocationSampleTest {
 		BlobStorageWriter tailsWriter = BlobStorageWriter.openWriter("default", tailsWriterConfig).get();
 
 		String revRegDefTag = "Tag2";
+		String revRegDefConfig = new JSONObject()
+				.put("issuance_type", "ISSUANCE_ON_DEMAND")
+				.put("max_cred_num", 5)
+				.toString();
 		AnoncredsResults.IssuerCreateAndStoreRevocRegResult createRevRegResult =
 				issuerCreateAndStoreRevocReg(issuerWallet, issuerDid, null, revRegDefTag, credDefId, revRegDefConfig, tailsWriter).get();
 		String revRegId = createRevRegResult.getRevRegId();
